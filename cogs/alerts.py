@@ -32,7 +32,7 @@ def check_cd(key):
 
 
 # =============================
-# DEFENSE SELECT
+# DEFENDER SELECT
 # =============================
 class DefenderSelect(discord.ui.UserSelect):
     def __init__(self, bot, alert_id):
@@ -97,9 +97,6 @@ class AlertView(discord.ui.View):
             ephemeral=True,
         )
 
-    # =============================
-    # SOLO BUTTON FIXÉ
-    # =============================
     @discord.ui.button(
         label="Solo",
         style=discord.ButtonStyle.danger,
@@ -138,6 +135,15 @@ class AlertsCog(commands.Cog):
 
     # =============================
     def build_embed(self, data):
+
+        # couleur dynamique
+        if data["result"] == "win":
+            color = discord.Color.green()
+        elif data["result"] == "lose":
+            color = discord.Color.red()
+        else:
+            color = discord.Color.blurple()
+
         state = "⏳ En cours"
         if data["result"] == "win":
             state = "🏆 Victoire"
@@ -156,7 +162,7 @@ class AlertsCog(commands.Cog):
         embed = discord.Embed(
             title="⚠️ Percepteur attaqué",
             description="🗡️ Un percepteur est en cours d’attaque !",
-            color=discord.Color.blurple()
+            color=color
         )
 
         embed.add_field(
