@@ -40,13 +40,12 @@ async def setup_hook():
         except Exception as e:
             print(f"ERREUR {ext} →", e)
 
-    # ✅ SYNC COMMANDES (comme ton ancien bot)
-    for g in bot.guilds:
-        try:
-            await bot.tree.sync(guild=discord.Object(id=g.id))
-            print("SYNC :", g.id)
-        except Exception as e:
-            print("SYNC ERROR :", e)
+    # ✅ SYNC GLOBAL (corrigé)
+    try:
+        await bot.tree.sync()
+        print("SYNC GLOBAL OK")
+    except Exception as e:
+        print("SYNC ERROR :", e)
 
 
 @bot.event
