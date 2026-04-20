@@ -4,48 +4,41 @@ from cogs.alerts import alerts_data
 
 
 class Reactions(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot):
         self.bot = bot
 
+    async def refresh(self, payload):
+        cog = self.bot.get_cog("AlertsCog")
+        if not cog:
+            return
+
+        data = alerts_data.get(payload.message_id)
+        if not data:
+            return
+
+        await cog.update_msg(payload.message_id)
+
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        if payload.guild_id is None:
-            return
-
-        if payload.user_id == self.bot.user.id:
-            return
-
+    async def on_raw_reaction_add(self, payload):
         if payload.message_id not in alerts_data:
             return
 
+        data = alerts_data[payload.message_id]
         emoji = str(payload.emoji)
 
-        # 🏆 victoire
         if emoji == "🏆":
-            alerts_data[payload.message_id]["result"] = "win"
-
-        # ❌ défaite
+            data["result"] = "win"
         elif emoji == "❌":
-            alerts_data[payload.message_id]["result"] = "lose"
-
-        # 😡 défense incomplète (toggle)
+            data["result"] = "lose"
         elif emoji == "😡":
-            alerts_data[payload.message_id]["incomplete"] = not alerts_data[payload.message_id].get("incomplete", False)
+            data["incomplete"] = not data["incomplete"]
+
+        await self.refresh(payload)
 
     @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
-        if payload.guild_id is None:
-            return
-
-        if payload.message_id not in alerts_data:
-            return
-
-        emoji = str(payload.emoji)
-
-        # 👍 retiré → on ne fait rien dans cette version
-        if emoji == "👍":
-            return
+    async def on_raw_reaction_remove(self, payload):
+        pass
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot):
     await bot.add_cog(Reactions(bot))
