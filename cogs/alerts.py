@@ -142,7 +142,7 @@ class AlertsCog(commands.Cog):
 
         embed = discord.Embed(
             title="⚠️ PERCEPTEUR ATTACK ALERT",
-            description="🗡️ Un percepteur Wanted est attaqué !",
+            description="🗡️ Un percepteur est attaqué !",
             color=discord.Color.blurple()
         )
 
