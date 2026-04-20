@@ -16,8 +16,8 @@ def run_flask():
 
 threading.Thread(target=run_flask, daemon=True).start()
 
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-if not DISCORD_TOKEN:
+TOKEN = os.getenv("DISCORD_TOKEN")
+if not TOKEN:
     raise SystemExit("Missing DISCORD_TOKEN")
 
 intents = discord.Intents.all()
@@ -28,17 +28,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def setup_hook():
-    print("🚀 setup_hook…")
-
-    for ext in [
-        "cogs.alerts",
-        "cogs.reactions",
-    ]:
-        try:
-            await bot.load_extension(ext)
-            print(f"OK {ext}")
-        except Exception as e:
-            print(f"ERREUR {ext} →", e)
+    print("🚀 loading cogs...")
+    await bot.load_extension("cogs.alerts")
+    await bot.load_extension("cogs.reactions")
 
 
 @bot.event
@@ -46,6 +38,4 @@ async def on_ready():
     print(f"Connecté en tant que {bot.user}")
 
 
-if __name__ == "__main__":
-    print("⚡ Booting…")
-    bot.run(DISCORD_TOKEN)
+bot.run(TOKEN)
