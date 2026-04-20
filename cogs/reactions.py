@@ -18,10 +18,6 @@ class Reactions(commands.Cog):
         if payload.message_id not in alerts_data:
             return
 
-        cog = self.bot.get_cog("AlertsCog")
-        if not cog:
-            return
-
         emoji = str(payload.emoji)
 
         # 🏆 victoire
@@ -32,9 +28,23 @@ class Reactions(commands.Cog):
         elif emoji == "❌":
             alerts_data[payload.message_id]["result"] = "lose"
 
-        # 😡 incomplète (toggle)
+        # 😡 défense incomplète (toggle)
         elif emoji == "😡":
             alerts_data[payload.message_id]["incomplete"] = not alerts_data[payload.message_id].get("incomplete", False)
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        if payload.guild_id is None:
+            return
+
+        if payload.message_id not in alerts_data:
+            return
+
+        emoji = str(payload.emoji)
+
+        # 👍 retiré → on ne fait rien dans cette version
+        if emoji == "👍":
+            return
 
 
 async def setup(bot: commands.Bot):
