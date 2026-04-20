@@ -4,41 +4,80 @@ from cogs.alerts import alerts_data
 
 
 class Reactions(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def refresh(self, payload):
+    # =============================
+    # REFRESH EMBED
+    # =============================
+    async def refresh(self, payload: discord.RawReactionActionEvent):
         cog = self.bot.get_cog("AlertsCog")
         if not cog:
             return
 
-        data = alerts_data.get(payload.message_id)
-        if not data:
-            return
-
         await cog.update_msg(payload.message_id)
 
+    # =============================
+    # ADD REACTION
+    # =============================
     @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+
+        if payload.guild_id is None:
+            return
+
+        if payload.user_id == self.bot.user.id:
+            return
+
         if payload.message_id not in alerts_data:
             return
 
         data = alerts_data[payload.message_id]
         emoji = str(payload.emoji)
 
-        if emoji == "🏆":
+        # =====================
+        # 👍 DEFENSEUR (IMPORTANT)
+        # =====================
+        if emoji == "👍":
+            data["defenders"].add(payload.user_id)
+
+        # 🏆 WIN
+        elif emoji == "🏆":
             data["result"] = "win"
+
+        # ❌ LOSE
         elif emoji == "❌":
             data["result"] = "lose"
+
+        # 😡 INCOMPLET
         elif emoji == "😡":
             data["incomplete"] = not data["incomplete"]
 
         await self.refresh(payload)
 
+    # =============================
+    # REMOVE REACTION
+    # =============================
     @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload):
-        pass
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+
+        if payload.guild_id is None:
+            return
+
+        if payload.message_id not in alerts_data:
+            return
+
+        data = alerts_data[payload.message_id]
+        emoji = str(payload.emoji)
+
+        # =====================
+        # RETRAIT DEFENSEUR
+        # =====================
+        if emoji == "👍":
+            data["defenders"].discard(payload.user_id)
+
+        await self.refresh(payload)
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Reactions(bot))
