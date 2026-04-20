@@ -244,10 +244,10 @@ class AlertsCog(commands.Cog):
         async def test(i): await self.send_test(i)
 
         buttons = [
-            ("Wanted 1", "⚔️", discord.ButtonStyle.primary, w1),
-            ("Wanted 2", "⚔️", discord.ButtonStyle.primary, w2),
-            ("A-team", "⚔️", discord.ButtonStyle.primary, at),
-            ("MOC", "⚔️", discord.ButtonStyle.primary, moc),
+            ("Wanted 1", "🗡️", discord.ButtonStyle.primary, w1),
+            ("Wanted 2", "🗡️", discord.ButtonStyle.primary, w2),
+            ("A-team", "🗡️", discord.ButtonStyle.primary, at),
+            ("MOC", "🗡️", discord.ButtonStyle.primary, moc),
             ("Rush", "🚨", discord.ButtonStyle.danger, rush),
             ("Test", "⚠️", discord.ButtonStyle.secondary, test),
         ]
