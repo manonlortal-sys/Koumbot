@@ -27,7 +27,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def setup_hook():
-    print("Loading cogs...")
     await bot.load_extension("cogs.alerts")
     await bot.load_extension("cogs.reactions")
 
