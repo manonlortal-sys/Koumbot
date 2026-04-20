@@ -8,14 +8,17 @@ class Reactions(commands.Cog):
         self.bot = bot
 
     # =============================
-    # REFRESH EMBED
+    # REFRESH SAFE
     # =============================
     async def refresh(self, payload: discord.RawReactionActionEvent):
         cog = self.bot.get_cog("AlertsCog")
         if not cog:
             return
 
-        await cog.update_msg(payload.message_id)
+        try:
+            await cog.update_msg(payload.message_id)
+        except Exception:
+            pass
 
     # =============================
     # ADD REACTION
@@ -36,22 +39,28 @@ class Reactions(commands.Cog):
         emoji = str(payload.emoji)
 
         # =====================
-        # 👍 DEFENSEUR (IMPORTANT)
+        # 👍 DEFENSEUR
         # =====================
         if emoji == "👍":
             data["defenders"].add(payload.user_id)
 
-        # 🏆 WIN
+        # =====================
+        # 🏆 VICTOIRE
+        # =====================
         elif emoji == "🏆":
             data["result"] = "win"
 
-        # ❌ LOSE
+        # =====================
+        # ❌ DÉFAITE
+        # =====================
         elif emoji == "❌":
             data["result"] = "lose"
 
-        # 😡 INCOMPLET
+        # =====================
+        # 😡 INCOMPLET (TOGGLE)
+        # =====================
         elif emoji == "😡":
-            data["incomplete"] = not data["incomplete"]
+            data["incomplete"] = not data.get("incomplete", False)
 
         await self.refresh(payload)
 
