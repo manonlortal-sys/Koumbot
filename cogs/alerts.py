@@ -15,17 +15,16 @@ ROLE_WANTED_2 = 1421860260377006295
 ROLE_ATEAM = 1437841408856948776
 ROLE_MOC = 1421927953188524144
 
-ROLE_TEST_ID = 1421867268421320844
+ROLE_TEST = 1421867268421320844
 
+MAX_DEFENDERS = 4
 COOLDOWN = 30
+
 last_ping = {}
-
-alerts_data: dict[int, dict] = {}
+alerts_data = {}
 
 # =============================
-# UTILS
-# =============================
-def check_cooldown(key: str) -> bool:
+def check_cd(key):
     now = time.time()
     if key in last_ping and now - last_ping[key] < COOLDOWN:
         return False
@@ -34,99 +33,108 @@ def check_cooldown(key: str) -> bool:
 
 
 # =============================
-# VIEW
-# =============================
-class AlertView(discord.ui.View):
-    def __init__(self, bot: commands.Bot):
-        super().__init__(timeout=None)
-        self.bot = bot
-
-
-# =============================
-# COG
-# =============================
 class AlertsCog(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot):
         self.bot = bot
-        self.alert_view = AlertView(bot)
-        bot.add_view(self.alert_view)
 
-    def build_embed(self, user_id):
+    # =============================
+    def build_embed(self, data):
         embed = discord.Embed(
-            title="⚠️ Percepteur attaqué",
-            description="🗡️ Alerte en cours",
-            color=discord.Color.orange()
+            title="⚠️ Alerte Percepteur",
+            color=discord.Color.blurple()
         )
 
         embed.add_field(
-            name="Déclenché par",
-            value=f"<@{user_id}>",
+            name="Auteur",
+            value=f"<@{data['author']}>",
             inline=False
         )
 
+        defenders = (
+            ", ".join(f"<@{d}>" for d in data["defenders"])
+            if data["defenders"]
+            else "Aucun"
+        )
+
+        embed.add_field(
+            name=f"Défenseurs ({len(data['defenders'])}/{MAX_DEFENDERS})",
+            value=defenders,
+            inline=False
+        )
+
+        state = "⏳ En cours"
+        if data["result"] == "win":
+            state = "🏆 Victoire"
+        elif data["result"] == "lose":
+            state = "❌ Défaite"
+
+        if data["incomplete"]:
+            state += " (incomplète)"
+
+        embed.add_field(name="État", value=state, inline=False)
+
+        embed.set_footer(text="Réactions live")
+
         return embed
 
+    # =============================
+    async def update_msg(self, message_id):
+        data = alerts_data.get(message_id)
+        if not data:
+            return
+
+        channel = self.bot.get_channel(ALERT_CHANNEL_ID)
+        msg = await channel.fetch_message(message_id)
+
+        await msg.edit(embed=self.build_embed(data))
+
+    # =============================
     async def send_alert(self, interaction, role_id):
-        if not check_cooldown(str(role_id)):
-            return await interaction.response.send_message("Cooldown actif", ephemeral=True)
+        if not check_cd(role_id):
+            return await interaction.response.send_message("Cooldown", ephemeral=True)
 
         channel = interaction.guild.get_channel(ALERT_CHANNEL_ID)
-
         await interaction.response.send_message("Alerte envoyée", ephemeral=True)
 
         await channel.send(f"<@&{role_id}>")
 
-        msg = await channel.send(
-            embed=self.build_embed(interaction.user.id),
-            view=self.alert_view
-        )
+        data = {
+            "author": interaction.user.id,
+            "defenders": set(),
+            "result": None,
+            "incomplete": False,
+        }
+
+        msg = await channel.send(embed=self.build_embed(data))
+        alerts_data[msg.id] = data
 
         for e in ("👍", "🏆", "❌", "😡"):
             await msg.add_reaction(e)
 
-        alerts_data[msg.id] = {"result": None, "incomplete": False}
-
     async def send_rush(self, interaction):
-        if not check_cooldown("rush"):
-            return await interaction.response.send_message("Cooldown actif", ephemeral=True)
-
         channel = interaction.guild.get_channel(ALERT_CHANNEL_ID)
-
         await interaction.response.send_message("Rush envoyé", ephemeral=True)
 
         await channel.send("@everyone")
 
-        msg = await channel.send(
-            embed=self.build_embed(interaction.user.id),
-            view=self.alert_view
-        )
-
-        for e in ("👍", "🏆", "❌", "😡"):
-            await msg.add_reaction(e)
-
-        alerts_data[msg.id] = {"result": None, "incomplete": False}
-
     async def send_test(self, interaction):
         channel = interaction.guild.get_channel(ALERT_CHANNEL_ID)
-
         await interaction.response.send_message("Test envoyé", ephemeral=True)
 
-        await channel.send(f"<@&{ROLE_TEST_ID}>")
+        await channel.send(f"<@&{ROLE_TEST}>")
 
-        msg = await channel.send(
-            embed=self.build_embed(interaction.user.id),
-            view=self.alert_view
-        )
+        data = {
+            "author": interaction.user.id,
+            "defenders": set(),
+            "result": None,
+            "incomplete": False,
+        }
 
-        for e in ("👍", "🏆", "❌", "😡"):
-            await msg.add_reaction(e)
-
-        alerts_data[msg.id] = {"result": None, "incomplete": False}
+        msg = await channel.send(embed=self.build_embed(data))
+        alerts_data[msg.id] = data
 
     # =============================
-    # PANEL
-    # =============================
-    @app_commands.command(name="pingpanel", description="Panel alertes")
+    @app_commands.command(name="pingpanel")
     async def pingpanel(self, interaction: discord.Interaction):
 
         view = discord.ui.View(timeout=None)
@@ -138,28 +146,26 @@ class AlertsCog(commands.Cog):
         async def rush(i): await self.send_rush(i)
         async def test(i): await self.send_test(i)
 
-        buttons = [
-            ("Wanted 1", "🗡️", w1, discord.ButtonStyle.primary),
-            ("Wanted 2", "🗡️", w2, discord.ButtonStyle.primary),
-            ("A-team", "🗡️", at, discord.ButtonStyle.primary),
-            ("MOC", "🗡️", moc, discord.ButtonStyle.primary),
-            ("Rush", "🚨", rush, discord.ButtonStyle.danger),
-            ("Test", "⚠️", test, discord.ButtonStyle.secondary),
+        btns = [
+            ("Wanted 1", "🗡️", discord.ButtonStyle.primary, w1),
+            ("Wanted 2", "🗡️", discord.ButtonStyle.primary, w2),
+            ("A-team", "🗡️", discord.ButtonStyle.primary, at),
+            ("MOC", "🗡️", discord.ButtonStyle.primary, moc),
+            ("RUSH", "🚨", discord.ButtonStyle.danger, rush),
+            ("TEST", "⚠️", discord.ButtonStyle.secondary, test),
         ]
 
-        for label, emoji, cb, style in buttons:
-            btn = discord.ui.Button(label=label, emoji=emoji, style=style)
-            btn.callback = cb
-            view.add_item(btn)
+        for label, emoji, style, cb in btns:
+            b = discord.ui.Button(label=label, emoji=emoji, style=style)
+            b.callback = cb
+            view.add_item(b)
 
-        embed = discord.Embed(
-            title="⚔️ Panel défense",
-            description="Clique pour envoyer une alerte",
-            color=discord.Color.blurple()
+        await interaction.response.send_message(
+            "Panel alertes",
+            view=view,
+            ephemeral=False
         )
 
-        await interaction.response.send_message(embed=embed, view=view)
 
-
-async def setup(bot: commands.Bot):
+async def setup(bot):
     await bot.add_cog(AlertsCog(bot))
