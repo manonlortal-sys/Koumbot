@@ -32,7 +32,7 @@ def check_cd(key):
 
 
 # =============================
-# VIEW DEFENSEURS (RESTAURÉ)
+# VIEW (IDENTIQUE ANCIEN BOT)
 # =============================
 class DefenderSelect(discord.ui.UserSelect):
     def __init__(self, bot, alert_id):
@@ -64,12 +64,64 @@ class DefenderSelectView(discord.ui.View):
         self.add_item(DefenderSelect(bot, alert_id))
 
 
+class AlertView(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(
+        label="Ajout défenseurs",
+        style=discord.ButtonStyle.success,
+        custom_id="alert_add_defender",
+    )
+    async def defender_button(self, interaction: discord.Interaction, _):
+        alert_id = interaction.message.id
+        data = alerts_data.get(alert_id)
+        if not data:
+            return
+
+        if interaction.user.id not in data["defenders"]:
+            return await interaction.response.send_message(
+                "Tu dois avoir 👍 sur l’alerte.",
+                ephemeral=True,
+            )
+
+        view = DefenderSelectView(self.bot, alert_id)
+        await interaction.response.send_message(
+            "Sélectionne les défenseurs :",
+            view=view,
+            ephemeral=True,
+        )
+
+    @discord.ui.button(
+        label="Solo",
+        style=discord.ButtonStyle.danger,
+        custom_id="alert_solo",
+    )
+    async def solo_button(self, interaction: discord.Interaction, _):
+        alert_id = interaction.message.id
+        data = alerts_data.get(alert_id)
+        if not data:
+            return
+
+        alerts_data.pop(alert_id, None)
+
+        try:
+            await interaction.message.delete()
+        except:
+            pass
+
+        await interaction.response.defer()
+
+
 # =============================
 # COG
 # =============================
 class AlertsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.view = AlertView(bot)
+        bot.add_view(self.view)
 
     # =============================
     def build_embed(self, data):
@@ -120,7 +172,7 @@ class AlertsCog(commands.Cog):
         channel = self.bot.get_channel(ALERT_CHANNEL_ID)
         msg = await channel.fetch_message(message_id)
 
-        await msg.edit(embed=self.build_embed(data))
+        await msg.edit(embed=self.build_embed(data), view=self.view)
 
     # =============================
     async def send_alert(self, interaction, role_id):
@@ -139,7 +191,7 @@ class AlertsCog(commands.Cog):
             "incomplete": False,
         }
 
-        msg = await channel.send(embed=self.build_embed(data))
+        msg = await channel.send(embed=self.build_embed(data), view=self.view)
         alerts_data[msg.id] = data
 
         for e in ("👍", "🏆", "❌", "😡"):
@@ -165,14 +217,12 @@ class AlertsCog(commands.Cog):
             "incomplete": False,
         }
 
-        msg = await channel.send(embed=self.build_embed(data))
+        msg = await channel.send(embed=self.build_embed(data), view=self.view)
         alerts_data[msg.id] = data
 
         for e in ("👍", "🏆", "❌", "😡"):
             await msg.add_reaction(e)
 
-    # =============================
-    # PANEL (RESTAURÉ COMPLET + DEFENSEURS)
     # =============================
     @app_commands.command(name="pingpanel", description="Panel alertes")
     async def pingpanel(self, interaction: discord.Interaction):
@@ -186,13 +236,6 @@ class AlertsCog(commands.Cog):
         async def rush(i): await self.send_rush(i)
         async def test(i): await self.send_test(i)
 
-        async def defenders(i):
-            data = {}  # placeholder runtime
-            await i.response.send_message(
-                "Sélectionne les défenseurs via le message d’alerte.",
-                ephemeral=True
-            )
-
         buttons = [
             ("Wanted 1", "⚔️", discord.ButtonStyle.primary, w1),
             ("Wanted 2", "⚔️", discord.ButtonStyle.primary, w2),
@@ -200,7 +243,6 @@ class AlertsCog(commands.Cog):
             ("MOC", "⚔️", discord.ButtonStyle.primary, moc),
             ("Rush", "🚨", discord.ButtonStyle.danger, rush),
             ("Test", "⚠️", discord.ButtonStyle.secondary, test),
-            ("Défenseurs", "🛡️", discord.ButtonStyle.success, defenders),
         ]
 
         for label, emoji, style, cb in buttons:
