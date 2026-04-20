@@ -32,7 +32,7 @@ def check_cd(key):
 
 
 # =============================
-# VIEW (IDENTIQUE ANCIEN BOT)
+# DEFENSE SELECT
 # =============================
 class DefenderSelect(discord.ui.UserSelect):
     def __init__(self, bot, alert_id):
@@ -51,6 +51,10 @@ class DefenderSelect(discord.ui.UserSelect):
 
         for user in self.values:
             data["defenders"].add(user.id)
+
+        alerts_cog = self.bot.get_cog("AlertsCog")
+        if alerts_cog:
+            await alerts_cog.update_msg(self.alert_id)
 
         await interaction.response.edit_message(
             content="Défenseurs ajoutés.",
@@ -250,7 +254,10 @@ class AlertsCog(commands.Cog):
             b.callback = cb
             view.add_item(b)
 
-        await interaction.response.send_message("Panel alertes", view=view)
+        await interaction.response.send_message(
+            "⚔️ Panel de défense percepteurs\nClique sur un bouton pour envoyer une alerte.",
+            view=view
+        )
 
 
 async def setup(bot):
