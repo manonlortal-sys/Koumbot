@@ -106,6 +106,7 @@ class AlertsCog(commands.Cog):
         msg = await channel.send(embed=self.build_embed(data))
         alerts_data[msg.id] = data
 
+        # ✅ réactions toujours ajoutées
         for e in ("👍", "🏆", "❌", "😡"):
             await msg.add_reaction(e)
 
@@ -135,6 +136,8 @@ class AlertsCog(commands.Cog):
         for e in ("👍", "🏆", "❌", "😡"):
             await msg.add_reaction(e)
 
+    # =============================
+    # PANEL
     # =============================
     @app_commands.command(name="pingpanel", description="Panel alertes")
     async def pingpanel(self, interaction: discord.Interaction):
