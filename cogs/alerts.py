@@ -14,7 +14,6 @@ ROLE_WANTED_1 = 1419320456263237663
 ROLE_WANTED_2 = 1421860260377006295
 ROLE_ATEAM = 1437841408856948776
 ROLE_MOC = 1421927953188524144
-
 ROLE_TEST = 1421867268421320844
 
 MAX_DEFENDERS = 4
@@ -23,7 +22,7 @@ COOLDOWN = 30
 last_ping = {}
 alerts_data = {}
 
-# =============================
+
 def check_cd(key):
     now = time.time()
     if key in last_ping and now - last_ping[key] < COOLDOWN:
@@ -32,7 +31,6 @@ def check_cd(key):
     return True
 
 
-# =============================
 class AlertsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -111,12 +109,13 @@ class AlertsCog(commands.Cog):
         for e in ("👍", "🏆", "❌", "😡"):
             await msg.add_reaction(e)
 
+    # =============================
     async def send_rush(self, interaction):
         channel = interaction.guild.get_channel(ALERT_CHANNEL_ID)
         await interaction.response.send_message("Rush envoyé", ephemeral=True)
-
         await channel.send("@everyone")
 
+    # =============================
     async def send_test(self, interaction):
         channel = interaction.guild.get_channel(ALERT_CHANNEL_ID)
         await interaction.response.send_message("Test envoyé", ephemeral=True)
@@ -133,8 +132,11 @@ class AlertsCog(commands.Cog):
         msg = await channel.send(embed=self.build_embed(data))
         alerts_data[msg.id] = data
 
+        for e in ("👍", "🏆", "❌", "😡"):
+            await msg.add_reaction(e)
+
     # =============================
-    @app_commands.command(name="pingpanel")
+    @app_commands.command(name="pingpanel", description="Panel alertes")
     async def pingpanel(self, interaction: discord.Interaction):
 
         view = discord.ui.View(timeout=None)
@@ -146,25 +148,21 @@ class AlertsCog(commands.Cog):
         async def rush(i): await self.send_rush(i)
         async def test(i): await self.send_test(i)
 
-        btns = [
-            ("Wanted 1", "🗡️", discord.ButtonStyle.primary, w1),
-            ("Wanted 2", "🗡️", discord.ButtonStyle.primary, w2),
-            ("A-team", "🗡️", discord.ButtonStyle.primary, at),
-            ("MOC", "🗡️", discord.ButtonStyle.primary, moc),
-            ("RUSH", "🚨", discord.ButtonStyle.danger, rush),
-            ("TEST", "⚠️", discord.ButtonStyle.secondary, test),
+        buttons = [
+            ("Wanted 1", "⚔️", discord.ButtonStyle.primary, w1),
+            ("Wanted 2", "⚔️", discord.ButtonStyle.primary, w2),
+            ("A-team", "⚔️", discord.ButtonStyle.primary, at),
+            ("MOC", "⚔️", discord.ButtonStyle.primary, moc),
+            ("Rush", "🚨", discord.ButtonStyle.danger, rush),
+            ("Test", "⚠️", discord.ButtonStyle.secondary, test),
         ]
 
-        for label, emoji, style, cb in btns:
+        for label, emoji, style, cb in buttons:
             b = discord.ui.Button(label=label, emoji=emoji, style=style)
             b.callback = cb
             view.add_item(b)
 
-        await interaction.response.send_message(
-            "Panel alertes",
-            view=view,
-            ephemeral=False
-        )
+        await interaction.response.send_message("Panel alertes", view=view)
 
 
 async def setup(bot):
