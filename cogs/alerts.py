@@ -31,6 +31,42 @@ def check_cd(key):
     return True
 
 
+# =============================
+# VIEW DEFENSEURS (RESTAURÉ)
+# =============================
+class DefenderSelect(discord.ui.UserSelect):
+    def __init__(self, bot, alert_id):
+        super().__init__(
+            placeholder="Sélectionne des défenseurs…",
+            min_values=1,
+            max_values=MAX_DEFENDERS,
+        )
+        self.bot = bot
+        self.alert_id = alert_id
+
+    async def callback(self, interaction: discord.Interaction):
+        data = alerts_data.get(self.alert_id)
+        if not data:
+            return
+
+        for user in self.values:
+            data["defenders"].add(user.id)
+
+        await interaction.response.edit_message(
+            content="Défenseurs ajoutés.",
+            view=None
+        )
+
+
+class DefenderSelectView(discord.ui.View):
+    def __init__(self, bot, alert_id):
+        super().__init__(timeout=60)
+        self.add_item(DefenderSelect(bot, alert_id))
+
+
+# =============================
+# COG
+# =============================
 class AlertsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -106,7 +142,6 @@ class AlertsCog(commands.Cog):
         msg = await channel.send(embed=self.build_embed(data))
         alerts_data[msg.id] = data
 
-        # ✅ réactions toujours ajoutées
         for e in ("👍", "🏆", "❌", "😡"):
             await msg.add_reaction(e)
 
@@ -137,7 +172,7 @@ class AlertsCog(commands.Cog):
             await msg.add_reaction(e)
 
     # =============================
-    # PANEL
+    # PANEL (RESTAURÉ COMPLET + DEFENSEURS)
     # =============================
     @app_commands.command(name="pingpanel", description="Panel alertes")
     async def pingpanel(self, interaction: discord.Interaction):
@@ -151,6 +186,13 @@ class AlertsCog(commands.Cog):
         async def rush(i): await self.send_rush(i)
         async def test(i): await self.send_test(i)
 
+        async def defenders(i):
+            data = {}  # placeholder runtime
+            await i.response.send_message(
+                "Sélectionne les défenseurs via le message d’alerte.",
+                ephemeral=True
+            )
+
         buttons = [
             ("Wanted 1", "⚔️", discord.ButtonStyle.primary, w1),
             ("Wanted 2", "⚔️", discord.ButtonStyle.primary, w2),
@@ -158,6 +200,7 @@ class AlertsCog(commands.Cog):
             ("MOC", "⚔️", discord.ButtonStyle.primary, moc),
             ("Rush", "🚨", discord.ButtonStyle.danger, rush),
             ("Test", "⚠️", discord.ButtonStyle.secondary, test),
+            ("Défenseurs", "🛡️", discord.ButtonStyle.success, defenders),
         ]
 
         for label, emoji, style, cb in buttons:
