@@ -11,14 +11,14 @@ from discord import app_commands
 PANEL_CHANNEL_ID = 1419318225232986294
 ALERT_CHANNEL_ID = 1488527268287610964
 
-PING_TEST_ROLE = 1421867268421320844
-
 ROLE_MAP = {
     "wanted1": 1419320456263237663,
     "wanted2": 1421860260377006295,
     "ateam": 1437841408856948776,
     "moc": 1421927953188524144,
 }
+
+PING_TEST_ROLE = 1421867268421320844
 
 COOLDOWN = 30
 last_ping = {}
@@ -42,20 +42,8 @@ def check_cooldown(key: str) -> bool:
 # VIEW ALERT
 # =============================
 class AlertView(discord.ui.View):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label="Ajout défenseurs", style=discord.ButtonStyle.success)
-    async def add_def(self, interaction: discord.Interaction, _):
-        await interaction.response.send_message(
-            "Sélection non activée sans stockage JSON.",
-            ephemeral=True
-        )
-
-    @discord.ui.button(label="Solo", style=discord.ButtonStyle.danger)
-    async def solo(self, interaction: discord.Interaction, _):
-        await interaction.response.defer()
 
 
 # =============================
@@ -64,16 +52,14 @@ class AlertView(discord.ui.View):
 class AlertsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.alert_view = AlertView(bot)
-        bot.add_view(self.alert_view)
 
     # =============================
     # EMBED
     # =============================
-    def build_embed(self, author_id: int, role_name: str = ""):
+    def build_embed(self, author_id: int, label: str):
         embed = discord.Embed(
             title="⚠️ Percepteur attaqué",
-            description=f"Type : {role_name}",
+            description=f"Type : {label}",
             color=discord.Color.orange()
         )
 
@@ -89,8 +75,8 @@ class AlertsCog(commands.Cog):
     # =============================
     # SEND ALERT
     # =============================
-    async def send_alert(self, interaction, role_key: str, ping: str):
-        if not check_cooldown(role_key):
+    async def send_alert(self, interaction, key: str, role_id: int):
+        if not check_cooldown(key):
             return await interaction.response.send_message(
                 "❌ Cooldown actif.",
                 ephemeral=True
@@ -100,11 +86,11 @@ class AlertsCog(commands.Cog):
 
         await interaction.response.send_message("Alerte envoyée.", ephemeral=True)
 
-        await channel.send(ping)
+        await channel.send(f"<@&{role_id}>")
 
         msg = await channel.send(
-            embed=self.build_embed(interaction.user.id, role_key),
-            view=self.alert_view
+            embed=self.build_embed(interaction.user.id, key),
+            view=AlertView()
         )
 
         for e in ("👍", "🏆", "❌", "😡"):
@@ -122,7 +108,7 @@ class AlertsCog(commands.Cog):
 
         msg = await channel.send(
             embed=self.build_embed(interaction.user.id, "TEST"),
-            view=self.alert_view
+            view=AlertView()
         )
 
         for e in ("👍", "🏆", "❌", "😡"):
@@ -136,31 +122,38 @@ class AlertsCog(commands.Cog):
 
         view = discord.ui.View(timeout=None)
 
+        async def make_callback(key, role_id):
+            async def callback(i: discord.Interaction):
+                await self.send_alert(i, key, role_id)
+            return callback
+
         # Wanted 1
         b1 = discord.ui.Button(label="Wanted 1", style=discord.ButtonStyle.primary, emoji="⚔️")
-        b1.callback = lambda i: self.send_alert(i, "wanted1", f"<@&{ROLE_MAP['wanted1']}>")
+        b1.callback = await make_callback("wanted1", ROLE_MAP["wanted1"])
         view.add_item(b1)
 
         # Wanted 2
         b2 = discord.ui.Button(label="Wanted 2", style=discord.ButtonStyle.primary, emoji="⚔️")
-        b2.callback = lambda i: self.send_alert(i, "wanted2", f"<@&{ROLE_MAP['wanted2']}>")
+        b2.callback = await make_callback("wanted2", ROLE_MAP["wanted2"])
         view.add_item(b2)
 
         # A-team
         b3 = discord.ui.Button(label="A-team", style=discord.ButtonStyle.primary, emoji="⚔️")
-        b3.callback = lambda i: self.send_alert(i, "ateam", f"<@&{ROLE_MAP['ateam']}>")
+        b3.callback = await make_callback("ateam", ROLE_MAP["ateam"])
         view.add_item(b3)
 
         # MOC
         b4 = discord.ui.Button(label="MOC", style=discord.ButtonStyle.primary, emoji="⚔️")
-        b4.callback = lambda i: self.send_alert(i, "moc", f"<@&{ROLE_MAP['moc']}>")
+        b4.callback = await make_callback("moc", ROLE_MAP["moc"])
         view.add_item(b4)
 
         # Rush
+        async def rush_callback(i):
+            await self.send_alert(i, "rush", None)
+            await i.channel.send("@everyone")
+
         rush = discord.ui.Button(label="Rush", style=discord.ButtonStyle.danger, emoji="🚨")
-        async def rush_cb(i):
-            await self.send_alert(i, "rush", "@everyone")
-        rush.callback = rush_cb
+        rush.callback = rush_callback
         view.add_item(rush)
 
         # Test
@@ -177,8 +170,5 @@ class AlertsCog(commands.Cog):
         await interaction.response.send_message(embed=embed, view=view)
 
 
-# =============================
-# SETUP
-# =============================
 async def setup(bot: commands.Bot):
     await bot.add_cog(AlertsCog(bot))
