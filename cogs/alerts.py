@@ -97,6 +97,9 @@ class AlertView(discord.ui.View):
             ephemeral=True,
         )
 
+    # =============================
+    # SOLO BUTTON FIXÉ
+    # =============================
     @discord.ui.button(
         label="Solo",
         style=discord.ButtonStyle.danger,
@@ -104,12 +107,22 @@ class AlertView(discord.ui.View):
     )
     async def solo_button(self, interaction: discord.Interaction, _):
         alert_id = interaction.message.id
-        alerts_data.pop(alert_id, None)
+        data = alerts_data.pop(alert_id, None)
+
+        if not data:
+            return await interaction.response.defer()
 
         try:
             await interaction.message.delete()
         except:
             pass
+
+        channel = interaction.guild.get_channel(ALERT_CHANNEL_ID)
+        if channel:
+            username = interaction.user.display_name
+            await channel.send(
+                f"⚠️ Une alerte a été supprimée par **{username}**"
+            )
 
         await interaction.response.defer()
 
@@ -141,8 +154,8 @@ class AlertsCog(commands.Cog):
         )
 
         embed = discord.Embed(
-            title="⚠️ PERCEPTEUR ATTACK ALERT",
-            description="🗡️ Un percepteur est attaqué !",
+            title="⚠️ Percepteur attaqué",
+            description="🗡️ Un percepteur est en cours d’attaque !",
             color=discord.Color.blurple()
         )
 
