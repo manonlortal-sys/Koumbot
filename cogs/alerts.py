@@ -52,9 +52,9 @@ class DefenderSelect(discord.ui.UserSelect):
         for user in self.values:
             data["defenders"].add(user.id)
 
-        alerts_cog = self.bot.get_cog("AlertsCog")
-        if alerts_cog:
-            await alerts_cog.update_msg(self.alert_id)
+        cog = self.bot.get_cog("AlertsCog")
+        if cog:
+            await cog.update_msg(self.alert_id)
 
         await interaction.response.edit_message(
             content="Défenseurs ajoutés.",
@@ -104,10 +104,6 @@ class AlertView(discord.ui.View):
     )
     async def solo_button(self, interaction: discord.Interaction, _):
         alert_id = interaction.message.id
-        data = alerts_data.get(alert_id)
-        if not data:
-            return
-
         alerts_data.pop(alert_id, None)
 
         try:
@@ -129,29 +125,6 @@ class AlertsCog(commands.Cog):
 
     # =============================
     def build_embed(self, data):
-        embed = discord.Embed(
-            title="⚠️ Alerte Percepteur",
-            color=discord.Color.blurple()
-        )
-
-        embed.add_field(
-            name="Auteur",
-            value=f"<@{data['author']}>",
-            inline=False
-        )
-
-        defenders = (
-            ", ".join(f"<@{d}>" for d in data["defenders"])
-            if data["defenders"]
-            else "Aucun"
-        )
-
-        embed.add_field(
-            name=f"Défenseurs ({len(data['defenders'])}/{MAX_DEFENDERS})",
-            value=defenders,
-            inline=False
-        )
-
         state = "⏳ En cours"
         if data["result"] == "win":
             state = "🏆 Victoire"
@@ -159,11 +132,41 @@ class AlertsCog(commands.Cog):
             state = "❌ Défaite"
 
         if data["incomplete"]:
-            state += " (incomplète)"
+            state += " (😡 incomplète)"
 
-        embed.add_field(name="État", value=state, inline=False)
+        defenders = (
+            ", ".join(f"<@{d}>" for d in data["defenders"])
+            if data["defenders"]
+            else "Aucun"
+        )
 
-        embed.set_footer(text="Réactions live")
+        embed = discord.Embed(
+            title="⚠️ PERCEPTEUR ATTACK ALERT",
+            description="🗡️ Un percepteur Wanted est attaqué !",
+            color=discord.Color.blurple()
+        )
+
+        embed.add_field(
+            name="🔔 Déclenché par",
+            value=f"<@{data['author']}>",
+            inline=False
+        )
+
+        embed.add_field(
+            name=f"🛡️ Défenseurs ({len(data['defenders'])}/{MAX_DEFENDERS})",
+            value=defenders,
+            inline=False
+        )
+
+        embed.add_field(
+            name="📊 État de l’attaque",
+            value=state,
+            inline=False
+        )
+
+        embed.set_footer(
+            text="👍 j’ai défendu • 🏆 victoire • ❌ défaite • 😡 défense incomplète"
+        )
 
         return embed
 
